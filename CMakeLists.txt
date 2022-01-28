@@ -78,7 +78,7 @@ target_include_directories(
             ${MPI4PY_INCLUDE_DIR})
 target_link_libraries(HtoolKernelMatrixBenchmarks PRIVATE ${MPI_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} OpenMP::OpenMP_CXX)
 
-target_compile_definitions(HtoolKernelMatrixBenchmarks PRIVATE "-DPYTHON_INTERFACE" "-DWITH_HPDDM")
+target_compile_definitions(HtoolKernelMatrixBenchmarks PRIVATE "-DWITH_HPDDM")
 
 if(CODE_COVERAGE AND (CMAKE_C_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"))
     target_compile_options(HtoolKernelMatrixBenchmarks PRIVATE -fprofile-arcs -ftest-coverage)

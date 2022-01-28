@@ -19,6 +19,7 @@ class Benchmark {
     int spatial_dimension;
     std::string KernelType;
     std::string CompressorType;
+    char symmetry, UPLO;
 
     std::shared_ptr<Cluster<ClusteringType>> source_cluster, target_cluster;
     std::unique_ptr<VirtualKernel<T>> generator;
@@ -26,8 +27,10 @@ class Benchmark {
     std::unique_ptr<HMatrix<T>> HA;
 
   public:
-    Benchmark(int spatial_dimension0, std::string KernelType0, std::string CompressorType0) : spatial_dimension(spatial_dimension0), source_cluster(new Cluster<ClusteringType>(spatial_dimension)), KernelType(KernelType0), CompressorType(CompressorType0), target_cluster(new Cluster<ClusteringType>(spatial_dimension)){};
-    void build_clusters(int nb_rows, int nb_cols, const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, const py::array_t<double, py::array::f_style | py::array::forcecast> &source_points) {
+    Benchmark(int spatial_dimension0, std::string KernelType0, std::string CompressorType0, char symmetry0 = 'N', char UPLO = 'N') : spatial_dimension(spatial_dimension0), source_cluster(new Cluster<ClusteringType>(spatial_dimension)), KernelType(KernelType0), CompressorType(CompressorType0), symmetry(symmetry0), UPLO(UPLO), target_cluster(new Cluster<ClusteringType>(spatial_dimension)){};
+    void build_clusters(int nb_rows, int nb_cols, const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, const py::array_t<double, py::array::f_style | py::array::forcecast> &source_points, int target_minclustersize, int source_minclustersize) {
+        source_cluster->set_minclustersize(source_minclustersize);
+        target_cluster->set_minclustersize(target_minclustersize);
         source_cluster->build(nb_cols, source_points.data(), 2);
         target_cluster->build(nb_rows, target_points.data(), 2);
         if (this->KernelType == "InverseDistanceKernel")
@@ -44,7 +47,8 @@ class Benchmark {
             throw std::logic_error("Compressor type not supported");
         }
     };
-    void build_clusters(int nb_rows, const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points) {
+    void build_clusters(int nb_rows, const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, int minclustersize) {
+        target_cluster->set_minclustersize(minclustersize);
         target_cluster->build(nb_rows, target_points.data(), 2);
         source_cluster = target_cluster;
 
@@ -63,7 +67,7 @@ class Benchmark {
         }
     };
     void build_HMatrix(const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, const py::array_t<double, py::array::f_style | py::array::forcecast> &source_points, double epsilon, double eta, double mintargetdepth, double minsourcedepth, double maxblocksize) {
-        HA = std::unique_ptr<HMatrix<T>>(new HMatrix<T>(target_cluster, source_cluster, epsilon, eta));
+        HA = std::unique_ptr<HMatrix<T>>(new HMatrix<T>(target_cluster, source_cluster, epsilon, eta, this->symmetry, this->UPLO));
         HA->set_compression(compressor);
         HA->set_minsourcedepth(minsourcedepth);
         HA->set_mintargetdepth(mintargetdepth);
@@ -73,7 +77,7 @@ class Benchmark {
     };
 
     void build_HMatrix(const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, double epsilon, double eta, double mintargetdepth, double minsourcedepth, double maxblocksize) {
-        HA = std::unique_ptr<HMatrix<T>>(new HMatrix<T>(target_cluster, source_cluster, epsilon, eta));
+        HA = std::unique_ptr<HMatrix<T>>(new HMatrix<T>(target_cluster, source_cluster, epsilon, eta, this->symmetry, this->UPLO));
         HA->set_compression(compressor);
         HA->set_minsourcedepth(minsourcedepth);
         HA->set_mintargetdepth(mintargetdepth);
@@ -101,9 +105,9 @@ template <typename T, typename ClusteringType>
 void declare_HtoolBenchmark(py::module &m, const std::string &className) {
     using Class = Benchmark<T, ClusteringType>;
     py::class_<Class> py_class(m, className.c_str());
-    py_class.def(py::init<int, std::string, std::string>());
-    py_class.def("build_clusters", overload_cast_<int, int, const py::array_t<double, py::array::f_style | py::array::forcecast> &, const py::array_t<double, py::array::f_style | py::array::forcecast> &>()(&Class::build_clusters));
-    py_class.def("build_clusters", overload_cast_<int, const py::array_t<double, py::array::f_style | py::array::forcecast> &>()(&Class::build_clusters));
+    py_class.def(py::init<int, std::string, std::string, char, char>());
+    py_class.def("build_clusters", overload_cast_<int, int, const py::array_t<double, py::array::f_style | py::array::forcecast> &, const py::array_t<double, py::array::f_style | py::array::forcecast> &, int, int>()(&Class::build_clusters));
+    py_class.def("build_clusters", overload_cast_<int, const py::array_t<double, py::array::f_style | py::array::forcecast> &, int>()(&Class::build_clusters));
     py_class.def("build_HMatrix", overload_cast_<const py::array_t<double, py::array::f_style | py::array::forcecast> &, const py::array_t<double, py::array::f_style | py::array::forcecast> &, double, double, double, double, double>()(&Class::build_HMatrix));
     py_class.def("build_HMatrix", overload_cast_<const py::array_t<double, py::array::f_style | py::array::forcecast> &, double, double, double, double, double>()(&Class::build_HMatrix));
     py_class.def("product", &Class::product);
