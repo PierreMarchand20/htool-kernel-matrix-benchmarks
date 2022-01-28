@@ -31,9 +31,9 @@ class Benchmark {
         source_cluster->build(nb_cols, source_points.data(), 2);
         target_cluster->build(nb_rows, target_points.data(), 2);
         if (this->KernelType == "InverseDistanceKernel")
-            generator = std::unique_ptr<InverseDistanceKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
+            generator = std::unique_ptr<InverseDistanceKernel<T>>(new InverseDistanceKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
         else if (this->KernelType == "GaussianKernel")
-            generator = std::unique_ptr<GaussianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
+            generator = std::unique_ptr<GaussianKernel<T>>(new GaussianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
         else {
             throw std::logic_error("Kernel type not supported");
         }
@@ -49,9 +49,9 @@ class Benchmark {
         source_cluster = target_cluster;
 
         if (this->KernelType == "InverseDistanceKernel")
-            generator = std::unique_ptr<InverseDistanceKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, target_points.data()));
+            generator = std::unique_ptr<InverseDistanceKernel<T>>(new InverseDistanceKernel<T>(spatial_dimension, nb_rows, target_points.data()));
         else if (this->KernelType == "GaussianKernel")
-            generator = std::unique_ptr<GaussianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
+            generator = std::unique_ptr<GaussianKernel<T>>(new GaussianKernel<T>(spatial_dimension, nb_rows, target_points.data()));
         else {
             throw std::logic_error("Kernel type not supported");
         }
@@ -74,10 +74,10 @@ class Benchmark {
 
     void product(const py::array_t<T, py::array::f_style | py::array::forcecast> &source_signal, py::array_t<T, py::array::f_style | py::array::forcecast> &result) {
         int mu;
-        if (B.ndim() == 1) {
+        if (source_signal.ndim() == 1) {
             mu = 1;
-        } else if (B.ndim() == 2) {
-            mu = B.shape()[1];
+        } else if (source_signal.ndim() == 2) {
+            mu = source_signal.shape()[1];
         }
         HA->mvprod_global_to_global(source_signal.data(), result.mutable_data(), mu);
     }
@@ -96,7 +96,7 @@ void declare_HtoolBenchmark(py::module &m, const std::string &className) {
     py_class.def("build_clusters", overload_cast_<int, const py::array_t<double, py::array::f_style | py::array::forcecast> &>()(&Class::build_clusters));
     py_class.def("build_HMatrix", &Class::build_HMatrix);
     py_class.def("product", &Class::product);
-    py_class.def("print_infos", &Class::print_infos);
+    py_class.def("print_HMatrix_infos", &Class::print_HMatrix_infos);
 }
 
 #endif
