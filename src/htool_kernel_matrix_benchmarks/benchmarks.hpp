@@ -30,8 +30,10 @@ class Benchmark {
     void build_clusters(int nb_rows, int nb_cols, const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, const py::array_t<double, py::array::f_style | py::array::forcecast> &source_points) {
         source_cluster->build(nb_cols, source_points.data(), 2);
         target_cluster->build(nb_rows, target_points.data(), 2);
-        if (this->KernelType == "Laplacian")
-            generator = std::unique_ptr<LaplacianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
+        if (this->KernelType == "InverseDistanceKernel")
+            generator = std::unique_ptr<InverseDistanceKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
+        else if (this->KernelType == "GaussianKernel")
+            generator = std::unique_ptr<GaussianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
         else {
             throw std::logic_error("Kernel type not supported");
         }
@@ -46,8 +48,10 @@ class Benchmark {
         target_cluster->build(nb_rows, target_points.data(), 2);
         source_cluster = target_cluster;
 
-        if (this->KernelType == "Laplacian")
-            generator = std::unique_ptr<LaplacianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, target_points.data()));
+        if (this->KernelType == "InverseDistanceKernel")
+            generator = std::unique_ptr<InverseDistanceKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, target_points.data()));
+        else if (this->KernelType == "GaussianKernel")
+            generator = std::unique_ptr<GaussianKernel<T>>(new LaplacianKernel<T>(spatial_dimension, nb_rows, nb_cols, target_points.data(), source_points.data()));
         else {
             throw std::logic_error("Kernel type not supported");
         }
@@ -69,7 +73,13 @@ class Benchmark {
     };
 
     void product(const py::array_t<T, py::array::f_style | py::array::forcecast> &source_signal, py::array_t<T, py::array::f_style | py::array::forcecast> &result) {
-        HA->mvprod_global_to_global(source_signal.data(), result.mutable_data());
+        int mu;
+        if (B.ndim() == 1) {
+            mu = 1;
+        } else if (B.ndim() == 2) {
+            mu = B.shape()[1];
+        }
+        HA->mvprod_global_to_global(source_signal.data(), result.mutable_data(), mu);
     }
 
     void print_HMatrix_infos() {

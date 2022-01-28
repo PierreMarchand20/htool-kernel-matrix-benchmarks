@@ -17,13 +17,26 @@ class VirtualKernel : public htool::VirtualGenerator<T> {
 };
 
 template <typename T>
-class LaplacianKernel : public VirtualKernel<T> {
+class InverseDistanceKernel : public VirtualKernel<T> {
   public:
     using VirtualKernel<T>::VirtualKernel;
     void copy_submatrix(int M, int N, const int *const rows, const int *const cols, T *ptr) const override {
         for (int i = 0; i < M; i++) {
             for (int j = 0; j < N; j++) {
-                ptr[i + M * j] = 1. / (1e-5 + 4 * M_PI * std::sqrt(std::inner_product(this->target_points + this->spatial_dimension * i, this->target_points + this->spatial_dimension * i + this->spatial_dimension, this->source_points + this->spatial_dimension * j, double(0), std::plus<double>(), [](double u, double v) { return (u - v) * (u - v); })));
+                ptr[i + M * j] = (i != j) ? 1. / (std::sqrt(std::inner_product(this->target_points + this->spatial_dimension * i, this->target_points + this->spatial_dimension * i + this->spatial_dimension, this->source_points + this->spatial_dimension * j, double(0), std::plus<double>(), [](double u, double v) { return (u - v) * (u - v); }))) : 0;
+            }
+        }
+    }
+};
+
+template <typename T>
+class GaussianKernel : public VirtualKernel<T> {
+  public:
+    using VirtualKernel<T>::VirtualKernel;
+    void copy_submatrix(int M, int N, const int *const rows, const int *const cols, T *ptr) const override {
+        for (int i = 0; i < M; i++) {
+            for (int j = 0; j < N; j++) {
+                ptr[i + M * j] = exp(-std::sqrt(std::inner_product(this->target_points + this->spatial_dimension * i, this->target_points + this->spatial_dimension * i + this->spatial_dimension, this->source_points + this->spatial_dimension * j, double(0), std::plus<double>(), [](double u, double v) { return (u - v) * (u - v); }))) : 0;
             }
         }
     }
