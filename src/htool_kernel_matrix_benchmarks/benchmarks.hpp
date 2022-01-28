@@ -72,6 +72,16 @@ class Benchmark {
         HA->build(*generator, target_points.data(), source_points.data());
     };
 
+    void build_HMatrix(const py::array_t<double, py::array::f_style | py::array::forcecast> &target_points, double epsilon, double eta, double mintargetdepth, double minsourcedepth, double maxblocksize) {
+        HA = std::unique_ptr<HMatrix<T>>(new HMatrix<T>(target_cluster, source_cluster, epsilon, eta));
+        HA->set_compression(compressor);
+        HA->set_minsourcedepth(minsourcedepth);
+        HA->set_mintargetdepth(mintargetdepth);
+        HA->set_maxblocksize(maxblocksize);
+
+        HA->build(*generator, target_points.data());
+    };
+
     void product(const py::array_t<T, py::array::f_style | py::array::forcecast> &source_signal, py::array_t<T, py::array::f_style | py::array::forcecast> &result) {
         int mu;
         if (source_signal.ndim() == 1) {
@@ -94,7 +104,8 @@ void declare_HtoolBenchmark(py::module &m, const std::string &className) {
     py_class.def(py::init<int, std::string, std::string>());
     py_class.def("build_clusters", overload_cast_<int, int, const py::array_t<double, py::array::f_style | py::array::forcecast> &, const py::array_t<double, py::array::f_style | py::array::forcecast> &>()(&Class::build_clusters));
     py_class.def("build_clusters", overload_cast_<int, const py::array_t<double, py::array::f_style | py::array::forcecast> &>()(&Class::build_clusters));
-    py_class.def("build_HMatrix", &Class::build_HMatrix);
+    py_class.def("build_HMatrix", overload_cast_<const py::array_t<double, py::array::f_style | py::array::forcecast> &, const py::array_t<double, py::array::f_style | py::array::forcecast> &, double, double, double, double, double>()(&Class::build_HMatrix));
+    py_class.def("build_HMatrix", overload_cast_<const py::array_t<double, py::array::f_style | py::array::forcecast> &, double, double, double, double, double>()(&Class::build_HMatrix));
     py_class.def("product", &Class::product);
     py_class.def("print_HMatrix_infos", &Class::print_HMatrix_infos);
 }
