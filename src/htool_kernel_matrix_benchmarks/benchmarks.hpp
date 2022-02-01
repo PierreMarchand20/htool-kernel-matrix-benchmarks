@@ -91,7 +91,7 @@ class Benchmark {
         if (source_signal.ndim() == 1) {
             mu = 1;
         } else if (source_signal.ndim() == 2) {
-            mu = source_signal.shape()[1];
+            mu = source_signal.shape(1);
         }
         HA->mvprod_global_to_global(source_signal.data(), result.mutable_data(), mu);
     }
